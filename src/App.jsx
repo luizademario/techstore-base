@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Routes, Route } from 'react-router'
+import { Navigate, Routes, Route } from 'react-router'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import RolarParaTopo from './components/RolarParaTopo'
@@ -7,6 +7,7 @@ import Loja from './pages/Loja'
 import PaginaProduto from './pages/PaginaProduto'
 import Carrinho from './pages/Carrinho'
 import Estoque from './pages/Estoque'
+import PainelLojista from './pages/PainelLojista'
 import { buscarProdutos } from './services/produtos'
 import { buscarClientes } from './services/clientes'
 
@@ -17,8 +18,24 @@ export default function App() {
   const [carrinho, setCarrinho] = useState([])
   const [clientes, setClientes] = useState([])
   const [clienteAtualId, setClienteAtualId] = useState(null)
+  const [modoLojista, setModoLojista] = useState(false)
+  const [listaEspera, setListaEspera] = useState({})
 
   useEffect(() => {
+    const salvoLista = localStorage.getItem('techstore-lista-espera')
+    if (salvoLista) {
+      try {
+        setListaEspera(JSON.parse(salvoLista))
+      } catch {
+        setListaEspera({})
+      }
+    }
+
+    const salvoModo = localStorage.getItem('techstore-modo-lojista')
+    if (salvoModo === 'true') {
+      setModoLojista(true)
+    }
+
     buscarProdutos()
       .then((dados) => setProdutos(dados))
       .catch(() => setErro('Não foi possível carregar os produtos.'))
@@ -30,8 +47,32 @@ export default function App() {
     })
   }, [])
 
+  useEffect(() => {
+    localStorage.setItem('techstore-lista-espera', JSON.stringify(listaEspera))
+  }, [listaEspera])
+
+  useEffect(() => {
+    localStorage.setItem('techstore-modo-lojista', String(modoLojista))
+  }, [modoLojista])
+
   function adicionarAoCarrinho(produto) {
     setCarrinho(carrinho.concat(produto))
+  }
+
+  function adicionarNaListaEspera(produtoId, dados) {
+    setListaEspera((estadoAnterior) => {
+      const listaAtual = estadoAnterior[produtoId] ?? []
+      const jaExiste = listaAtual.some(
+        (item) => item.email.toLowerCase() === dados.email.toLowerCase()
+      )
+
+      if (jaExiste) return estadoAnterior
+
+      return {
+        ...estadoAnterior,
+        [produtoId]: [...listaAtual, dados],
+      }
+    })
   }
 
   function removerUmaUnidade(produtoId) {
@@ -67,7 +108,14 @@ export default function App() {
             />
             <Route
               path="/produto/:id"
-              element={<PaginaProduto produtos={produtos} onAdicionar={adicionarAoCarrinho} />}
+              element={
+                <PaginaProduto
+                  produtos={produtos}
+                  onAdicionar={adicionarAoCarrinho}
+                  listaEspera={listaEspera}
+                  onAdicionarListaEspera={adicionarNaListaEspera}
+                />
+              }
             />
             <Route
               path="/carrinho"
@@ -81,7 +129,20 @@ export default function App() {
                 />
               }
             />
-            <Route path="/estoque" element={<Estoque produtos={produtos} />} />
+            <Route
+              path="/estoque"
+              element={<Estoque produtos={produtos} listaEspera={listaEspera} />}
+            />
+            <Route
+              path="/painel-lojista"
+              element={
+                modoLojista ? (
+                  <PainelLojista produtos={produtos} listaEspera={listaEspera} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
           </Routes>
         )}
       </main>
@@ -90,6 +151,9 @@ export default function App() {
         clientes={clientes}
         clienteAtualId={clienteAtualId}
         onTrocarCliente={setClienteAtualId}
+        modoLojista={modoLojista}
+        onAbrirPainelLojista={() => setModoLojista(true)}
+        onFecharPainelLojista={() => setModoLojista(false)}
       />
     </div>
   )
