@@ -1,6 +1,13 @@
 import { Link } from 'react-router'
 
-export default function Footer({ clientes, clienteAtualId, onTrocarCliente }) {
+export default function Footer({
+  clientes,
+  clienteAtualId,
+  onTrocarCliente,
+  modoLojista,
+  onAbrirPainelLojista,
+  onFecharPainelLojista,
+}) {
   return (
     <footer className="footer">
       <div className="footer-conteudo">
@@ -20,6 +27,15 @@ export default function Footer({ clientes, clienteAtualId, onTrocarCliente }) {
         <div className="footer-coluna">
           <p className="footer-titulo">Área interna</p>
           <Link to="/estoque">Estoque</Link>
+          {modoLojista ? (
+            <button type="button" className="botao-link" onClick={onFecharPainelLojista}>
+              Sair do painel do lojista
+            </button>
+          ) : (
+            <button type="button" className="botao-link" onClick={onAbrirPainelLojista}>
+              Painel do lojista
+            </button>
+          )}
         </div>
       </div>
 
